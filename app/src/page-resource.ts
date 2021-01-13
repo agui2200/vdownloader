@@ -12,5 +12,9 @@ export const About = import('./views/about/about')
 
 export const NoMatch = import('./views/no-match/no-match')
 
+export const ParseFile = import('./views/parse-csv/parse-file')
+
+export const DownloadTask = import('./views/parse-csv/downloadtask')
+
 // 同步引用，注意这不会出发 beforeRouter
 export { default as AlertModal } from './views/modals/alert-modal'

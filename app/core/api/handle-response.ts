@@ -10,7 +10,7 @@ export async function errorAction(err: any, sendData: any, options: RequestOptio
   const { code, message } = err
   const { errorType } = options
 
-  $tools.log.error(`[request:${code}] [${errorType}]`, err)
+  // $tools.log.error(`[request:${code}] [${errorType}]`, err)
 
   switch (code) {
     // 跳转到未登录页

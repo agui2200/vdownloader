@@ -8,6 +8,6 @@ export async function initMain() {
     global.__$api = api
     global.__$store = store
 
-    resolve()
+    resolve(null)
   })
 }

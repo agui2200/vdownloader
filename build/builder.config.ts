@@ -18,7 +18,7 @@ const {
 } = process.env
 
 const config: Configuration = {
-  productName,
+  productName: '辅助工具',
   buildVersion,
   appId,
   files: ['dist', 'assets', 'package.json'],

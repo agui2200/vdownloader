@@ -1,7 +1,7 @@
 import React from 'react'
 import $c from 'classnames'
 
-import { AppTitlebar, AppSidebar } from '../'
+// import { AppTitlebar, AppSidebar } from '../'
 
 import './app-layout.less'
 
@@ -15,12 +15,19 @@ export class AppLayout extends React.Component<AppLayoutProps> {
     const { createConfig } = this.props
     return (
       <div className={$c('flex app-layout', { 'has-titlebar': createConfig.showTitlebar }, process.platform)}>
+        <div className="app-content" style={{ width: '100%', padding: '1%' }}>
+          {this.props.children}
+        </div>
+      </div>
+    )
+    /**
+     * <div className={$c('flex app-layout', { 'has-titlebar': createConfig.showTitlebar }, process.platform)}>
         {createConfig.showSidebar ? <AppSidebar /> : null}
         <div className="flex-1 app-content-wrap">
           {createConfig.showTitlebar ? <AppTitlebar /> : null}
           <div className="app-content">{this.props.children}</div>
         </div>
       </div>
-    )
+     */
   }
 } // class AppLayout end

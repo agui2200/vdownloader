@@ -1,5 +1,5 @@
 {
-  "name": "electron-antd",
+  "name": "downloadtools",
   "appId": "org.electron.electron-antd",
   "version": "1.0.0",
   "buildVersion": "0001",
@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "@types/classnames": "^2.2.10",
+    "@types/crypto-js": "^4.0.1",
     "@types/html-webpack-plugin": "^3.2.3",
     "@types/mini-css-extract-plugin": "^0.9.1",
     "@types/node": "^14.0.24",
@@ -82,5 +83,14 @@
   "bugs": {
     "url": "https://github.com/lanten/electron-antd/issues"
   },
-  "homepage": "https://github.com/lanten/electron-antd#readme"
+  "homepage": "https://github.com/lanten/electron-antd#readme",
+  "dependencies": {
+    "ahooks": "^2.9.3",
+    "async": "^3.2.0",
+    "axios-retry": "^3.1.9",
+    "crypto-js": "^4.0.0",
+    "m3u8-parser": "^4.5.0",
+    "md5": "^2.3.0",
+    "rxjs": "^6.6.3"
+  }
 }

@@ -1,6 +1,9 @@
 import axios, { AxiosRequestConfig } from 'axios'
 import path from 'path'
 import { errorAction } from './handle-response'
+import axiosRetry from 'axios-retry'
+// 添加重试次数
+axiosRetry(axios, { retries: 3 })
 
 // axios 跨域请求携带 cookie
 axios.defaults.withCredentials = true
@@ -21,9 +24,41 @@ const DEFAULT_CONFIG = {
 
 // 默认传递的参数
 const DEFAULT_PARAMS = {}
+/**
+ * 发起一个原始的请求
+ * @param url
+ * @param params
+ * @param optionsSource
+ */
+export async function requestRaw(url: string, params?: RequestParams, optionsSource?: RequestOptions) {
+  const options: RequestOptions = Object.assign({}, DEFAULT_CONFIG, optionsSource)
+  const { method, headers, responseType, checkStatus, formData } = options
+  const sendData: AxiosRequestConfig = {
+    url: url,
+    method,
+    headers,
+    responseType,
+  }
+
+  const paramsData = Object.assign({}, DEFAULT_PARAMS, params)
+
+  if (method === 'GET') {
+    sendData.params = params
+  } else if (formData) {
+    const formData = new FormData()
+    Object.keys(paramsData).forEach((key) => {
+      formData.append(key, paramsData[key])
+    })
+    sendData.data = formData
+  } else {
+    sendData.data = paramsData
+  }
+
+  return axios(sendData)
+}
 
 /**
- * 发起一个请求
+ * 发起一个json请求
  * @param apiPath
  * @param params
  * @param optionsSource

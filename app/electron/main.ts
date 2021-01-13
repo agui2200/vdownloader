@@ -10,19 +10,20 @@ app.allowRendererProcessReuse = true
 
 app.on('ready', () => {
   tray = creatAppTray()
-  $tools.createWindow('Home')
+  $tools.createWindow('ParseFile')
 })
 
 app.on('activate', () => {
   if (process.platform == 'darwin') {
-    $tools.createWindow('Home')
+    $tools.createWindow('ParseFile')
   }
 })
 
 app.on('window-all-closed', () => {
   // if (process.platform !== 'darwin') {
-  //   app.quit()
+
   // }
+  app.quit()
 })
 
 app.on('before-quit', () => {

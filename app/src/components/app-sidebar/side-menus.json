@@ -28,5 +28,11 @@
     "href": "#/about",
     "title": "About",
     "icon": "information"
+  },
+  {
+    "key": "ParseFile",
+    "href": "#/parse-file",
+    "title": "ParseFile",
+    "icon": "information"
   }
 ]

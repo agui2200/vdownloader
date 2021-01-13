@@ -16,5 +16,9 @@ declare namespace NodeJS {
     API_BASE_PATH: string
   }
 }
+declare module 'm3u8-parser'
+declare module 'md5'
+declare module 'crypto-js'
+declare module 'async'
 
 declare const nodeRequire: NodeRequire
