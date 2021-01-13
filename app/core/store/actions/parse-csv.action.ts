@@ -32,6 +32,11 @@ export function CLEAR_CACHE(state: StoreStates, action: StoreAction<'CLEAR_CACHE
 }
 
 export function CHANGE_SAVE_AT(state: StoreStates, action: StoreAction<'CHANGE_SAVE_AT'>) {
+  // 创建目录
+  if (action.data != null) {
+    mkdirSync(action.data, { recursive: true })
+  }
+
   return { saveAt: action.data }
 }
 
