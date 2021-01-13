@@ -11,7 +11,11 @@ export const initialState = {
   tasks: [],
   m3uKeyCache: [],
   saveAt: '',
-  taskInfo: { downloading: false },
+  taskInfo: { downloading: false, canceled: false },
+}
+
+export function CANCEL_DOWNLOAD(state: StoreStates, action: StoreAction<'CANCEL_DOWNLOAD'>) {
+  state.taskInfo.canceled = true
 }
 
 export function CLEAR_CACHE(state: StoreStates, action: StoreAction<'CLEAR_CACHE'>) {
@@ -140,6 +144,7 @@ const mergeTsToMp4 = (
 
 export async function ACTION_DOWNLOAD_M3U(state: StoreStates, action: StoreAction<'ACTION_DOWNLOAD_M3U'>) {
   state.taskInfo.downloading = true
+  state.taskInfo.canceled = false
   for (const t of action.data) {
     for (const item of state.tasks) {
       if (item.id == t && item.status != taskStatus.downloading && item.status != taskStatus.mergeing) {
@@ -179,6 +184,13 @@ export async function ACTION_DOWNLOAD_M3U(state: StoreStates, action: StoreActio
           task.status = taskStatus.downloading
           const httpReqLists: any[] = []
           for (const u of list) {
+            //判断是否取消下载,如果取消,则退出任务
+            if (state.taskInfo.canceled) {
+              state.taskInfo.downloading = false
+              state.taskInfo.canceled = false
+              task.status = taskStatus.none
+              return
+            }
             //拼接路径
             if (task?.url) {
               const url = new URL(task?.url)
@@ -325,6 +337,7 @@ declare global {
     saveAt: string
     taskInfo: {
       downloading: boolean
+      canceled: boolean
     }
   }
 
@@ -334,5 +347,6 @@ declare global {
     CHANGE_SAVE_AT: string | null
     CLEAR_CACHE: any
     DOWNLOAD_DONE: any
+    CANCEL_DOWNLOAD: any
   }
 }

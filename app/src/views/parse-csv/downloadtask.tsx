@@ -6,13 +6,11 @@ import { sep } from 'path'
 const { dialog, getGlobal } = require('electron').remote
 
 export default withStore(['tasks', 'saveAt', 'taskInfo'])((props: RouteProps & StoreProps & StoreStates) => {
-  console.log('props.downloading', props.taskInfo.downloading)
   const [tdata, settdata] = useState<any[]>([])
   const [hasSelected, setHasSelected] = useState<boolean>(false)
   const [selectedRowKeys, setSelectedRowKeys] = useState<any[]>([])
   const initfunc = () => {
     const res: any[] = []
-    console.info(props.tasks)
     props.tasks.forEach((e: any) => {
       e.key = e.id
       res.push(e)
@@ -23,7 +21,7 @@ export default withStore(['tasks', 'saveAt', 'taskInfo'])((props: RouteProps & S
     const { remote } = require('electron')
     remote.getCurrentWindow().setSize(800, 600)
     initfunc()
-    const timer = setInterval(initfunc, 3000)
+    const timer = setInterval(initfunc, 500)
     //初始化保存目录
     props.dispatch({
       type: 'CHANGE_SAVE_AT',
@@ -131,7 +129,23 @@ export default withStore(['tasks', 'saveAt', 'taskInfo'])((props: RouteProps & S
     <div>
       <Alert message="如果下载的视频,出现黑屏,卡顿,缺失,重新下载即可" type="info" />
       {props.taskInfo.downloading && (
-        <Alert style={{ marginTop: '5px' }} message={<div>下载任务进行中,请勿重复添加任务</div>} type="info" />
+        <Alert
+          style={{ marginTop: '5px' }}
+          message={
+            <div>
+              下载任务进行中,请勿重复添加任务
+              <Button
+                onClick={() => {
+                  props.dispatch({ type: 'CANCEL_DOWNLOAD', data: {} })
+                }}
+                type="link"
+              >
+                取消下载
+              </Button>
+            </div>
+          }
+          type="info"
+        />
       )}
       <div style={{ marginBottom: 16 }}></div>
       <div style={{ marginBottom: 16 }}>
