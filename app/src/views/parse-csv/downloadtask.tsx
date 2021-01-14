@@ -3,35 +3,32 @@ import { withStore } from '@/src/components'
 import { RouteProps } from 'react-router-dom'
 import { Table, Button, Input, Alert, message } from 'antd'
 import { sep } from 'path'
+import { useDispatch, useSelector } from 'react-redux'
+
+import { useDebounce } from 'ahooks'
+
 const { dialog, getGlobal } = require('electron').remote
 
-export default withStore(['tasks', 'saveAt', 'taskInfo'])((props: RouteProps & StoreProps & StoreStates) => {
-  const [tdata, settdata] = useState<any[]>([])
+export default (props: RouteProps) => {
   const [hasSelected, setHasSelected] = useState<boolean>(false)
   const [selectedRowKeys, setSelectedRowKeys] = useState<any[]>([])
-  const initfunc = () => {
-    const res: any[] = []
-    props.tasks.forEach((e: any) => {
-      e.key = e.id
-      res.push(e)
-    })
-    settdata(res)
-  }
+  const tasks = useSelector((state: StoreStates) => state.tasks)
+  const saveAt = useSelector((state: StoreStates) => state.saveAt)
+  const taskInfo = useSelector((state: StoreStates) => state.taskInfo)
+  const debounceTasks = useDebounce(tasks, { wait: 1000 })
+  console.log(debounceTasks)
+  const dispatch = useDispatch()
   useEffect(() => {
     const { remote } = require('electron')
     remote.getCurrentWindow().setSize(800, 600)
-    initfunc()
-    const timer = setInterval(initfunc, 500)
     //初始化保存目录
-    props.dispatch({
+    dispatch({
       type: 'CHANGE_SAVE_AT',
       data:
         localStorage.getItem('saveAt') != null
           ? localStorage.getItem('saveAt')
           : $tools.USER_DATA_PATH + sep + 'output',
     })
-
-    return () => clearInterval(timer)
   }, [])
 
   const columns = [
@@ -49,6 +46,20 @@ export default withStore(['tasks', 'saveAt', 'taskInfo'])((props: RouteProps & S
       title: '已下载分片',
       dataIndex: 'downloadCount',
       key: 'downloadCount',
+    },
+    {
+      title: '文件类型',
+      dataIndex: 'type',
+      key: 'type',
+      render: (v: number) => {
+        switch (v) {
+          case 1:
+            return <p>音频</p>
+          case 2:
+          case 3:
+            return <p>视频</p>
+        }
+      },
     },
     {
       title: '状态',
@@ -90,8 +101,7 @@ export default withStore(['tasks', 'saveAt', 'taskInfo'])((props: RouteProps & S
   }
 
   const start = async () => {
-    initfunc()
-    props.dispatch({ type: 'ACTION_DOWNLOAD_M3U', data: selectedRowKeys })
+    dispatch({ type: 'ACTION_DOWNLOAD', data: selectedRowKeys })
 
     console.log('task done')
   }
@@ -104,9 +114,9 @@ export default withStore(['tasks', 'saveAt', 'taskInfo'])((props: RouteProps & S
       properties: ['openDirectory'],
     }
     const files = dialog.showOpenDialogSync(options)
-    if (files.length > 0) {
+    if (files && files.length > 0) {
       localStorage.setItem('saveAt', files[0])
-      props.dispatch({ type: 'CHANGE_SAVE_AT', data: files[0] })
+      dispatch({ type: 'CHANGE_SAVE_AT', data: files[0] })
     }
   }
 
@@ -121,14 +131,14 @@ export default withStore(['tasks', 'saveAt', 'taskInfo'])((props: RouteProps & S
     const bidx = dialog.showMessageBoxSync(options)
     if (bidx == 1) {
       // 执行清除缓存操作
-      props.dispatch({ type: 'CLEAR_CACHE', data: null })
+      dispatch({ type: 'CLEAR_CACHE', data: null })
     }
   }
 
   return (
     <div>
       <Alert message="如果下载的视频,出现黑屏,卡顿,缺失,重新下载即可" type="info" />
-      {props.taskInfo.downloading && (
+      {taskInfo.downloading && (
         <Alert
           style={{ marginTop: '5px' }}
           message={
@@ -136,7 +146,7 @@ export default withStore(['tasks', 'saveAt', 'taskInfo'])((props: RouteProps & S
               下载任务进行中,请勿重复添加任务
               <Button
                 onClick={() => {
-                  props.dispatch({ type: 'CANCEL_DOWNLOAD', data: {} })
+                  dispatch({ type: 'CANCEL_DOWNLOAD', data: {} })
                 }}
                 type="link"
               >
@@ -150,14 +160,14 @@ export default withStore(['tasks', 'saveAt', 'taskInfo'])((props: RouteProps & S
       <div style={{ marginBottom: 16 }}></div>
       <div style={{ marginBottom: 16 }}>
         <p>选择文件存储目录</p>
-        <Input type="primary" addonAfter={<a onClick={selectDir}>选择目录</a>} value={props.saveAt} />
+        <Input type="primary" addonAfter={<a onClick={selectDir}>选择目录</a>} value={saveAt} />
       </div>
       <div style={{ marginBottom: 16 }}>
         <Button type="dashed" danger style={{ margin: '0 15px 0 0' }} onClick={clearCache}>
           清除缓存
         </Button>
 
-        <Button type="primary" onClick={start} disabled={!hasSelected || props.taskInfo.downloading}>
+        <Button type="primary" onClick={start} disabled={!hasSelected || taskInfo.downloading}>
           下载选中文件
         </Button>
         <span style={{ marginLeft: 8 }}>
@@ -169,14 +179,14 @@ export default withStore(['tasks', 'saveAt', 'taskInfo'])((props: RouteProps & S
                 type="warning"
               />
             ) : (
-              `已选择 ${selectedRowKeys.length}/${tdata.length} 个文件`
+              `已选择 ${selectedRowKeys.length}/${debounceTasks.length} 个文件`
             )
           ) : (
             ''
           )}
         </span>
       </div>
-      <Table rowSelection={rowSelection} dataSource={tdata} columns={columns} />
+      <Table rowSelection={rowSelection} dataSource={debounceTasks} columns={columns} />
     </div>
   )
-})
+}

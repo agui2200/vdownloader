@@ -1,5 +1,14 @@
 import Axios from 'axios'
-import { mkdirSync, writeFileSync, existsSync, rmdir, readdirSync, statSync, unlinkSync, stat } from 'fs'
+import {
+  mkdirSync,
+  writeFileSync,
+  existsSync,
+  createWriteStream,
+  readdirSync,
+  statSync,
+  unlinkSync,
+  stat,
+} from 'fs'
 import { sep } from 'path'
 
 import md5 from 'md5'
@@ -16,6 +25,9 @@ export const initialState = {
 
 export function CANCEL_DOWNLOAD(state: StoreStates, action: StoreAction<'CANCEL_DOWNLOAD'>) {
   state.taskInfo.canceled = true
+  state.tasks.map((t) => {
+    t.status = taskStatus.none
+  })
 }
 
 export function CLEAR_CACHE(state: StoreStates, action: StoreAction<'CLEAR_CACHE'>) {
@@ -86,6 +98,43 @@ const getNewArray = (arr: any[], size: number) => {
   return result
 }
 
+const saveFileToOutput = async (
+  state: StoreStates,
+  id: string | undefined,
+  outpath: string,
+  outext: string
+) => {
+  for (const i in state.tasks) {
+    if (Object.prototype.hasOwnProperty.call(state.tasks, i)) {
+      if (state.tasks[i].id == id) {
+        $tools.log.debug('task id ' + state.tasks[i].id + ' file downloading')
+        const task = state.tasks[i]
+        task.status = taskStatus.downloading
+        await $api
+          .requestRaw(
+            task.url,
+            {},
+            {
+              method: 'GET',
+              headers: {
+                'User-Agent':
+                  'Mozilla/5.0 (Macintosh; Intel Mac OS X 11_1_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36',
+                'Content-Type': 'application/vnd.apple.mpegurl',
+              },
+              responseType: 'stream',
+            }
+          )
+          .then((v) => {
+            console.log('created file :' + outpath + sep + task.name + '.' + outext)
+            const fd = createWriteStream(outpath + sep + task.name + '.' + outext)
+            v.data.pipe(fd)
+            state.tasks[i].status = taskStatus.done
+          })
+      }
+    }
+  }
+}
+
 const mergeTsToMp4 = (
   state: StoreStates,
   id: string | undefined,
@@ -142,7 +191,7 @@ const mergeTsToMp4 = (
   })
 }
 
-export async function ACTION_DOWNLOAD_M3U(state: StoreStates, action: StoreAction<'ACTION_DOWNLOAD_M3U'>) {
+export async function ACTION_DOWNLOAD(state: StoreStates, action: StoreAction<'ACTION_DOWNLOAD'>) {
   state.taskInfo.downloading = true
   state.taskInfo.canceled = false
   for (const t of action.data) {
@@ -171,138 +220,151 @@ export async function ACTION_DOWNLOAD_M3U(state: StoreStates, action: StoreActio
       if (err) $tools.log.error('目录创建失败', err)
       $tools.log.info('创建目录[' + path + ']成功')
       //创建目录成功
-      //开始下载ts文件到目标目录
-      //切割 playLists
-      if (task?.m3uPlayLists) {
-        //重置一下下载次数
-        if (task.downloadCount != 0) {
-          task.downloadCount = 0
-        }
-        const m3uPlayLists = getNewArray(task?.m3uPlayLists, 10)
 
-        for (const list of m3uPlayLists) {
-          task.status = taskStatus.downloading
-          const httpReqLists: any[] = []
-          for (const u of list) {
-            //判断是否取消下载,如果取消,则退出任务
-            if (state.taskInfo.canceled) {
-              state.taskInfo.downloading = false
-              state.taskInfo.canceled = false
-              task.status = taskStatus.none
-              return
+      switch (task.type) {
+        case taskType.m3u:
+          //开始下载ts文件到目标目录
+          //切割 playLists
+          if (task?.m3uPlayLists) {
+            //重置一下下载次数
+            if (task.downloadCount != 0) {
+              task.downloadCount = 0
             }
-            //拼接路径
-            if (task?.url) {
-              const url = new URL(task?.url)
-              url.pathname = url.pathname.split('/').slice(0, -1).join('/')
-              const tsUrl = url.href + '/' + u.uri
-              // 检查文件
-              const tsfile = path + sep + md5(u.uri) + '.ts'
-              if (existsSync(tsfile)) {
-                if (task.id) {
-                  downloadtaskInc(state, task.id)
-                  continue
+            const m3uPlayLists = getNewArray(task?.m3uPlayLists, 10)
+
+            for (const list of m3uPlayLists) {
+              task.status = taskStatus.downloading
+              const httpReqLists: any[] = []
+              for (const u of list) {
+                //判断是否取消下载,如果取消,则退出任务
+                if (state.taskInfo.canceled) {
+                  state.taskInfo.downloading = false
+                  state.taskInfo.canceled = false
+                  task.status = taskStatus.none
+                  return
+                }
+                //拼接路径
+                if (task?.url) {
+                  const url = new URL(task?.url)
+                  url.pathname = url.pathname.split('/').slice(0, -1).join('/')
+                  const tsUrl = url.href + '/' + u.uri
+                  // 检查文件
+                  const tsfile = path + sep + md5(u.uri) + '.ts'
+                  if (existsSync(tsfile)) {
+                    if (task.id) {
+                      downloadtaskInc(state, task.id)
+                      continue
+                    }
+                  }
+
+                  // 封装request
+                  let req = $api
+                    .requestRaw(
+                      tsUrl,
+                      {},
+                      {
+                        method: 'GET',
+                        headers: {
+                          'User-Agent':
+                            'Mozilla/5.0 (Macintosh; Intel Mac OS X 11_1_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36',
+                          'Content-Type': 'application/vnd.apple.mpegurl',
+                        },
+                        responseType: 'arraybuffer',
+                      }
+                    )
+                    .then((v) => {
+                      const saveFile = (key: any) => {
+                        //解密
+                        let decipher = crypto.createDecipheriv('aes-128-cbc', key, u.key.iv)
+                        // decipher.setAutoPadding(true)
+                        let decrypted = decipher.update(Buffer.from(v.data))
+                        Buffer.concat([decrypted, decipher.final()])
+                        writeFileSync(tsfile, decrypted)
+                        //获取单个任务信息
+                        for (const i in state.tasks) {
+                          if (Object.prototype.hasOwnProperty.call(state.tasks, i)) {
+                            if (state.tasks[i].id == t) {
+                              $tools.log.debug(
+                                'task id ' + state.tasks[i].id + ' = ' + state.tasks[i!].downloadCount
+                              )
+                              state.tasks[i].downloadCount++
+                            }
+                          }
+                        }
+                      }
+
+                      //解密ts
+                      if (u.key) {
+                        switch (u.key.method) {
+                          case 'AES-128':
+                            // 获取密钥
+                            if (state.m3uKeyCache[u.key.uri]) {
+                              saveFile(state.m3uKeyCache[u.key.uri])
+                            } else {
+                              $api
+                                .requestRaw(
+                                  u.key.uri,
+                                  {},
+                                  {
+                                    method: 'GET',
+                                    headers: {
+                                      'User-Agent':
+                                        'Mozilla/5.0 (Macintosh; Intel Mac OS X 11_1_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36',
+                                      'Content-Type': 'application/vnd.apple.mpegurl',
+                                    },
+                                    responseType: 'arraybuffer',
+                                  }
+                                )
+                                .then((res) => {
+                                  $tools.log.debug('获取密钥:' + Buffer.from(res.data, 'binary'), u.key.iv)
+                                  //缓存密钥信息
+                                  let key = []
+                                  if (!state.m3uKeyCache[u.key.uri]) {
+                                    state.m3uKeyCache[u.key.uri] = res.data
+                                    key = res.data
+                                  } else {
+                                    key = state.m3uKeyCache[u.key.uri]
+                                  }
+                                  saveFile(key)
+                                })
+                                .catch((err) => {
+                                  $tools.log.error(
+                                    '解密key加载失败,任务ID:' +
+                                      action.data +
+                                      '地址:' +
+                                      u.key.uri +
+                                      ' 下载失败' +
+                                      err
+                                  )
+                                })
+                            }
+                        }
+                      }
+                    })
+                    .catch((e) => {
+                      $tools.log.error('请求错误[' + tsUrl + ']:', e)
+                    })
+                  httpReqLists.push(req)
                 }
               }
 
-              // 封装request
-              let req = $api
-                .requestRaw(
-                  tsUrl,
-                  {},
-                  {
-                    method: 'GET',
-                    headers: {
-                      'User-Agent':
-                        'Mozilla/5.0 (Macintosh; Intel Mac OS X 11_1_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36',
-                      'Content-Type': 'application/vnd.apple.mpegurl',
-                    },
-                    responseType: 'arraybuffer',
-                  }
-                )
-                .then((v) => {
-                  const saveFile = (key: any) => {
-                    //解密
-                    let decipher = crypto.createDecipheriv('aes-128-cbc', key, u.key.iv)
-                    // decipher.setAutoPadding(true)
-                    let decrypted = decipher.update(Buffer.from(v.data))
-                    Buffer.concat([decrypted, decipher.final()])
-                    writeFileSync(tsfile, decrypted)
-                    //获取单个任务信息
-                    for (const i in state.tasks) {
-                      if (Object.prototype.hasOwnProperty.call(state.tasks, i)) {
-                        if (state.tasks[i].id == t) {
-                          $tools.log.debug(
-                            'task id ' + state.tasks[i].id + ' = ' + state.tasks[i!].downloadCount
-                          )
-                          state.tasks[i].downloadCount++
-                        }
-                      }
-                    }
-                  }
-
-                  //解密ts
-                  if (u.key) {
-                    switch (u.key.method) {
-                      case 'AES-128':
-                        // 获取密钥
-                        if (state.m3uKeyCache[u.key.uri]) {
-                          saveFile(state.m3uKeyCache[u.key.uri])
-                        } else {
-                          $api
-                            .requestRaw(
-                              u.key.uri,
-                              {},
-                              {
-                                method: 'GET',
-                                headers: {
-                                  'User-Agent':
-                                    'Mozilla/5.0 (Macintosh; Intel Mac OS X 11_1_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36',
-                                  'Content-Type': 'application/vnd.apple.mpegurl',
-                                },
-                                responseType: 'arraybuffer',
-                              }
-                            )
-                            .then((res) => {
-                              $tools.log.debug('获取密钥:' + Buffer.from(res.data, 'binary'), u.key.iv)
-                              //缓存密钥信息
-                              let key = []
-                              if (!state.m3uKeyCache[u.key.uri]) {
-                                state.m3uKeyCache[u.key.uri] = res.data
-                                key = res.data
-                              } else {
-                                key = state.m3uKeyCache[u.key.uri]
-                              }
-                              saveFile(key)
-                            })
-                            .catch((err) => {
-                              $tools.log.error(
-                                '解密key加载失败,任务ID:' +
-                                  action.data +
-                                  '地址:' +
-                                  u.key.uri +
-                                  ' 下载失败' +
-                                  err
-                              )
-                            })
-                        }
-                    }
-                  }
-                })
-                .catch((e) => {
-                  $tools.log.error('请求错误[' + tsUrl + ']:', e)
-                })
-              httpReqLists.push(req)
+              if (httpReqLists.length > 0) {
+                await Axios.all(httpReqLists).then((d) => {})
+              }
             }
+            //ts文件合并
+            task.status = taskStatus.mergeing
+            mergeTsToMp4(state, task.id, path, task.m3uPlayLists, state.saveAt, task.name)
           }
-
-          if (httpReqLists.length > 0) {
-            await Axios.all(httpReqLists).then((d) => {})
-          }
-        }
-        //ts文件合并
-        task.status = taskStatus.mergeing
-        mergeTsToMp4(state, task.id, path, task.m3uPlayLists, state.saveAt, task.name)
+          break
+        //文件下载逻辑
+        case taskType.mp3:
+          // 异步的
+          await saveFileToOutput(state, task.id, state.saveAt, 'mp3')
+          break
+        case taskType.mp4:
+          await saveFileToOutput(state, task.id, state.saveAt, 'mp4')
+          break
       }
     }
   }
@@ -319,8 +381,14 @@ type taskInfo = {
   downloadCount: number
   m3uPlayLists?: Array<any> // m3u 下的子ts分片
   m3uDownloadErrorLists?: Array<any> // 下载失败的ts分片
+  type: taskType
 }
 
+enum taskType {
+  mp3 = 1,
+  mp4,
+  m3u,
+}
 enum taskStatus {
   none = 1,
   checking,
@@ -343,7 +411,7 @@ declare global {
 
   interface StoreActions {
     ACTION_PARSE_CSV: taskInfo[]
-    ACTION_DOWNLOAD_M3U: string[]
+    ACTION_DOWNLOAD: string[]
     CHANGE_SAVE_AT: string | null
     CLEAR_CACHE: any
     DOWNLOAD_DONE: any
