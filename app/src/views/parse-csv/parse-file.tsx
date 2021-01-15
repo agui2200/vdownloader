@@ -11,8 +11,10 @@ type taskInfo = {
   status: number
   splitCount: number
   downloadCount: number
+  errorCount: number
   m3uPlayLists?: Array<string> // m3u 下的子ts分片
   type?: number
+  errMessage?: string
 }
 
 const parseFile = async (
@@ -27,7 +29,14 @@ const parseFile = async (
   for (const v of rows) {
     const row = v.split(',')
     if (row.length > 1) {
-      const item: taskInfo = { name: row[0], url: row[1], status: 1, downloadCount: 0, splitCount: 0 }
+      const item: taskInfo = {
+        name: row[0],
+        url: row[1],
+        status: 1,
+        downloadCount: 0,
+        splitCount: 0,
+        errorCount: 0,
+      }
       console.debug('on  push csv item', row)
       if (row[1].indexOf('.mp3') > 0) {
         // 直接是mp3的,算音频
@@ -81,6 +90,9 @@ const parseFile = async (
           })
           .catch((e) => {
             if (ecb) {
+              item.status = 5
+              item.errMessage = e
+              res.push(item)
               ecb(item, e)
             }
           })

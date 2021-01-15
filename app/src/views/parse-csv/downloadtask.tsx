@@ -48,6 +48,11 @@ export default (props: RouteProps) => {
       key: 'downloadCount',
     },
     {
+      title: '错误分片',
+      dataIndex: 'errorCount',
+      key: 'errorCount',
+    },
+    {
       title: '文件类型',
       dataIndex: 'type',
       key: 'type',
@@ -76,7 +81,7 @@ export default (props: RouteProps) => {
           case 4:
             return <p>已下载完成</p>
           case 5:
-            return <p>下载失败请重试</p>
+            return <p>数据读取失败</p>
           case 6:
             return <p>合并视频中</p>
           case 7:
@@ -135,6 +140,10 @@ export default (props: RouteProps) => {
     }
   }
 
+  const openLoggerDir = () => {
+    const { shell } = require('electron').remote
+    shell.showItemInFolder($tools.LOGS_PATH)
+  }
   return (
     <div>
       <Alert message="如果下载的视频,出现黑屏,卡顿,缺失,重新下载即可" type="info" />
@@ -166,7 +175,9 @@ export default (props: RouteProps) => {
         <Button type="dashed" danger style={{ margin: '0 15px 0 0' }} onClick={clearCache}>
           清除缓存
         </Button>
-
+        <Button type="primary" style={{ margin: '0 15px 0 0' }} onClick={openLoggerDir}>
+          打开日志目录
+        </Button>
         <Button type="primary" onClick={start} disabled={!hasSelected || taskInfo.downloading}>
           下载选中文件
         </Button>

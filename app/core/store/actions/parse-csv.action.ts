@@ -74,16 +74,20 @@ export function ACTION_PARSE_CSV(
   return { tasks: action.data }
 }
 
-const downloadtaskInc = (state: StoreStates, id: string) => {
+const downloadtaskInc = (state: StoreStates, id: string, isError?: boolean) => {
   for (const i in state.tasks) {
     if (Object.prototype.hasOwnProperty.call(state.tasks, i)) {
       if (state.tasks[i].id == id) {
-        $tools.log.debug('task id ' + state.tasks[i].id + ' = ' + state.tasks[i!].downloadCount)
-        state.tasks[i].downloadCount++
+        if (isError) {
+          state.tasks[i].errorCount++
+        } else {
+          state.tasks[i].downloadCount++
+        }
       }
     }
   }
 }
+
 const getNewArray = (arr: any[], size: number) => {
   // size=5，要分割的长度
   const arrNum = Math.ceil(arr.length / size) // Math.ceil()向上取整的方法，用来计算拆分后数组的长度
@@ -230,7 +234,7 @@ export async function ACTION_DOWNLOAD(state: StoreStates, action: StoreAction<'A
             if (task.downloadCount != 0) {
               task.downloadCount = 0
             }
-            const m3uPlayLists = getNewArray(task?.m3uPlayLists, 10)
+            const m3uPlayLists = getNewArray(task?.m3uPlayLists, 15)
 
             for (const list of m3uPlayLists) {
               task.status = taskStatus.downloading
@@ -281,16 +285,8 @@ export async function ACTION_DOWNLOAD(state: StoreStates, action: StoreAction<'A
                         Buffer.concat([decrypted, decipher.final()])
                         writeFileSync(tsfile, decrypted)
                         //获取单个任务信息
-                        for (const i in state.tasks) {
-                          if (Object.prototype.hasOwnProperty.call(state.tasks, i)) {
-                            if (state.tasks[i].id == t) {
-                              $tools.log.debug(
-                                'task id ' + state.tasks[i].id + ' = ' + state.tasks[i!].downloadCount
-                              )
-                              state.tasks[i].downloadCount++
-                            }
-                          }
-                        }
+                        downloadtaskInc(state, t)
+                        $tools.log.debug('task id ' + t + ' = ' + task?.downloadCount)
                       }
 
                       //解密ts
@@ -328,6 +324,7 @@ export async function ACTION_DOWNLOAD(state: StoreStates, action: StoreAction<'A
                                   saveFile(key)
                                 })
                                 .catch((err) => {
+                                  downloadtaskInc(state, t, true)
                                   $tools.log.error(
                                     '解密key加载失败,任务ID:' +
                                       action.data +
@@ -342,6 +339,7 @@ export async function ACTION_DOWNLOAD(state: StoreStates, action: StoreAction<'A
                       }
                     })
                     .catch((e) => {
+                      downloadtaskInc(state, t, true)
                       $tools.log.error('请求错误[' + tsUrl + ']:', e)
                     })
                   httpReqLists.push(req)
@@ -352,6 +350,7 @@ export async function ACTION_DOWNLOAD(state: StoreStates, action: StoreAction<'A
                 await Axios.all(httpReqLists).then((d) => {})
               }
             }
+
             //ts文件合并
             task.status = taskStatus.mergeing
             mergeTsToMp4(state, task.id, path, task.m3uPlayLists, state.saveAt, task.name)
@@ -379,9 +378,11 @@ type taskInfo = {
   status: taskStatus
   splitCount?: number
   downloadCount: number
+  errorCount: number
   m3uPlayLists?: Array<any> // m3u 下的子ts分片
   m3uDownloadErrorLists?: Array<any> // 下载失败的ts分片
   type: taskType
+  errMessage?: string
 }
 
 enum taskType {
