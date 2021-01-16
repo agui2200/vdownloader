@@ -130,7 +130,9 @@ const saveFileToOutput = async (
           )
           .then((v) => {
             console.log('created file :' + outpath + sep + task.name + '.' + outext)
-            const fd = createWriteStream(outpath + sep + task.name + '.' + outext)
+            const fd = createWriteStream(
+              outpath + sep + task.name.replace(/[:|\*|\\|/|?|"|<|>|\|]/g, ' ') + '.' + outext
+            )
             v.data.pipe(fd)
             state.tasks[i].status = taskStatus.done
           })
@@ -167,7 +169,7 @@ const mergeTsToMp4 = (
     filesTxt,
     '-c',
     'copy',
-    outpath + sep + outFileName + '.mp4',
+    outpath + sep + outFileName.replace(/[:|\*|\\|/|?|"|<|>|\|]/g, ' ') + '.mp4',
   ]
   let command = ''
   switch (process.platform) {
