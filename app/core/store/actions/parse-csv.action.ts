@@ -44,7 +44,7 @@ export function CLEAR_CACHE(state: StoreStates, action: StoreAction<'CLEAR_CACHE
       }
     })
   }
-  emptyDir($tools.USER_DATA_PATH + sep + 'videoCache')
+  emptyDir(state.saveAt + sep + 'videoCache')
 }
 
 export function CHANGE_SAVE_AT(state: StoreStates, action: StoreAction<'CHANGE_SAVE_AT'>) {
@@ -152,7 +152,8 @@ const mergeTsToMp4 = (
   const exec = require('child_process').execFile
   let cfiles: string = ''
   for (const f of files) {
-    cfiles += 'file ' + "'" + path + sep + md5(f.uri) + '.ts' + "'" + '\r\n'
+    const fd = path + sep + md5(f.uri) + '.ts'
+    cfiles += 'file ' + "'" + fd + "'" + '\r\n'
   }
   // 在对应目录下创建files.txt文件
   const filesTxt = path + sep + 'files.txt'
@@ -220,7 +221,7 @@ export async function ACTION_DOWNLOAD(state: StoreStates, action: StoreAction<'A
     if (task != null) {
       task.status = taskStatus.checking
       //创建cache目录
-      const path = $tools.USER_DATA_PATH + sep + 'videoCache' + sep + task.id
+      const path = state.saveAt + sep + 'videoCache' + sep + task.id
       const err = mkdirSync(path, { recursive: true })
 
       if (err) $tools.log.error('目录创建失败', err)

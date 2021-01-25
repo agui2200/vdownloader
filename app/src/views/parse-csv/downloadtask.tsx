@@ -172,7 +172,13 @@ export default (props: RouteProps) => {
         <Input type="primary" addonAfter={<a onClick={selectDir}>选择目录</a>} value={saveAt} />
       </div>
       <div style={{ marginBottom: 16 }}>
-        <Button type="dashed" danger style={{ margin: '0 15px 0 0' }} onClick={clearCache}>
+        <Button
+          type="dashed"
+          danger
+          style={{ margin: '0 15px 0 0' }}
+          onClick={clearCache}
+          disabled={taskInfo.downloading}
+        >
           清除缓存
         </Button>
         <Button type="primary" style={{ margin: '0 15px 0 0' }} onClick={openLoggerDir}>
