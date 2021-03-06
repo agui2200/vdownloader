@@ -45,6 +45,13 @@ const parseFile = async (
         cb(rows.length, item)
         continue
       }
+      if (row[1].indexOf('.m4a') > 0) {
+        // 直接是mp3的,算音频
+        item.type = 5
+        res.push(item)
+        cb(rows.length, item)
+        continue
+      }
       if (row[1].indexOf('.mp4') > 0) {
         // 直接是mp4视频
         item.type = 2
@@ -96,7 +103,12 @@ const parseFile = async (
               ecb(item, e)
             }
           })
+        continue
       }
+      // 全部都没有的
+      item.type = 4
+      res.push(item)
+      cb(rows.length, item)
     }
   }
   return res

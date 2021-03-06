@@ -106,7 +106,7 @@ const saveFileToOutput = async (
   state: StoreStates,
   id: string | undefined,
   outpath: string,
-  outext: string
+  outext?: string
 ) => {
   for (const i in state.tasks) {
     if (Object.prototype.hasOwnProperty.call(state.tasks, i)) {
@@ -129,10 +129,19 @@ const saveFileToOutput = async (
             }
           )
           .then((v) => {
-            console.log('created file :' + outpath + sep + task.name + '.' + outext)
-            const fd = createWriteStream(
-              outpath + sep + task.name.replace(/[:|\*|\\|/|?|"|<|>|\|]/g, ' ') + '.' + outext
-            )
+            let output = ''
+            if (!outext) {
+              let uri = task.url.split('/')
+              if (uri.length > 0) {
+                outext = uri[uri.length - 1]
+                output = outpath + sep + outext.replace(/[:|\*|\\|/|?|"|<|>|\|]/g, ' ')
+              } else {
+                output = outpath + sep + task.name.replace(/[:|\*|\\|/|?|"|<|>|\|]/g, ' ')
+              }
+            } else {
+              output = outpath + sep + task.name.replace(/[:|\*|\\|/|?|"|<|>|\|]/g, ' ') + '.' + outext
+            }
+            const fd = createWriteStream(output)
             v.data.pipe(fd)
             state.tasks[i].status = taskStatus.done
           })
@@ -360,6 +369,14 @@ export async function ACTION_DOWNLOAD(state: StoreStates, action: StoreAction<'A
           }
           break
         //文件下载逻辑
+        case taskType.m4a:
+          // 异步的
+          await saveFileToOutput(state, task.id, state.saveAt, 'm4a')
+          break
+        case taskType.file:
+          // 异步的
+          await saveFileToOutput(state, task.id, state.saveAt)
+          break
         case taskType.mp3:
           // 异步的
           await saveFileToOutput(state, task.id, state.saveAt, 'mp3')
@@ -392,6 +409,8 @@ enum taskType {
   mp3 = 1,
   mp4,
   m3u,
+  file,
+  m4a,
 }
 enum taskStatus {
   none = 1,
