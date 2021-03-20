@@ -24,6 +24,15 @@ const DEFAULT_CONFIG = {
 
 // 默认传递的参数
 const DEFAULT_PARAMS = {}
+
+let DEFAULT_HEADERS = {}
+
+export function setHeaders(headers: any) {
+  DEFAULT_HEADERS = {
+    ...DEFAULT_HEADERS,
+    ...headers,
+  }
+}
 /**
  * 发起一个原始的请求
  * @param url
@@ -33,13 +42,13 @@ const DEFAULT_PARAMS = {}
 export async function requestRaw(url: string, params?: RequestParams, optionsSource?: RequestOptions) {
   const options: RequestOptions = Object.assign({}, DEFAULT_CONFIG, optionsSource)
   const { method, headers, responseType, checkStatus, formData } = options
+  const newHeaders = { ...headers, ...DEFAULT_HEADERS }
   const sendData: AxiosRequestConfig = {
     url: url,
     method,
-    headers,
+    headers: newHeaders,
     responseType,
   }
-
   const paramsData = Object.assign({}, DEFAULT_PARAMS, params)
 
   if (method === 'GET') {
@@ -53,7 +62,6 @@ export async function requestRaw(url: string, params?: RequestParams, optionsSou
   } else {
     sendData.data = paramsData
   }
-
   return axios(sendData)
 }
 

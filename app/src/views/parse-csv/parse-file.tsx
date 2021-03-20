@@ -4,6 +4,7 @@ import { withStore } from '@/src/components'
 import { Parser } from 'm3u8-parser'
 import { RouterProps } from 'react-router'
 import { useDispatch, useSelector } from 'react-redux'
+import { request } from '@/core/api'
 
 type taskInfo = {
   name: string
@@ -18,7 +19,6 @@ type taskInfo = {
 }
 
 const parseFile = async (
-  props: RouterProps,
   raw: string | ArrayBuffer,
   cb: (count: number, item: taskInfo) => void,
   ecb?: (item: taskInfo, err: any) => void
@@ -60,6 +60,20 @@ const parseFile = async (
         continue
       }
       if (row[1].indexOf('.m3u') > 0) {
+        let drmHeaders = {}
+        // 检查一下特殊url,针对xiaoetong做的header 处理
+        if (item.url && item.url.indexOf('encrypt-k-vod.xet.tech') > 0) {
+          console.log(item.url)
+          const url = new URL(item.url)
+          const refs = url.searchParams.get('whref')
+          if (refs) {
+            drmHeaders = {
+              Referer: 'http://' + refs.split(',')[0],
+              Origin: 'http://' + refs.split(',')[0],
+            }
+            $api.setHeaders(drmHeaders)
+          }
+        }
         item.type = 3
         const m3uUrl = item.url.split('/') //处理掉最后的file.m3u,改为ts
         const tsPath = m3uUrl.slice(0, -1).join('/') //url 还原
@@ -145,7 +159,6 @@ export default function (props: RouterProps) {
           if (files != null && files?.length > 0) {
             const file = files[0]
             const reader = new FileReader()
-            // 将图片转成DataURL格式
             reader.readAsText(file)
             reader.onload = async function () {
               //读取完毕后输出结果
@@ -153,10 +166,8 @@ export default function (props: RouterProps) {
 
               // props.dispatch({ type: 'ACTION_PARSE_CSV', data: reader.result })
               // 加载完成,渲染表格组件
-              console.log(props)
               if (reader.result) {
                 const res = await parseFile(
-                  props,
                   reader.result,
                   (count) => {
                     setParseRowsCount(count)

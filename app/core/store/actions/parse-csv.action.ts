@@ -131,7 +131,7 @@ const saveFileToOutput = async (
           .then((v) => {
             let output = ''
             if (!outext) {
-              let uri = task.url.split('/')
+              const uri = task.url.split('/')
               if (uri.length > 0) {
                 outext = uri[uri.length - 1]
                 output = outpath + sep + outext.replace(/[:|\*|\\|/|?|"|<|>|\|]/g, ' ')
@@ -263,7 +263,12 @@ export async function ACTION_DOWNLOAD(state: StoreStates, action: StoreAction<'A
                 if (task?.url) {
                   const url = new URL(task?.url)
                   url.pathname = url.pathname.split('/').slice(0, -1).join('/')
-                  const tsUrl = url.href + '/' + u.uri
+                  const tsUrl =
+                    url.protocol +
+                    '//' +
+                    url.host +
+                    [url.pathname, u.uri].join('/') +
+                    url.searchParams.toString()
                   // 检查文件
                   const tsfile = path + sep + md5(u.uri) + '.ts'
                   if (existsSync(tsfile)) {
@@ -291,9 +296,9 @@ export async function ACTION_DOWNLOAD(state: StoreStates, action: StoreAction<'A
                     .then((v) => {
                       const saveFile = (key: any) => {
                         //解密
-                        let decipher = crypto.createDecipheriv('aes-128-cbc', key, u.key.iv)
+                        const decipher = crypto.createDecipheriv('aes-128-cbc', key, u.key.iv)
                         // decipher.setAutoPadding(true)
-                        let decrypted = decipher.update(Buffer.from(v.data))
+                        const decrypted = decipher.update(Buffer.from(v.data))
                         Buffer.concat([decrypted, decipher.final()])
                         writeFileSync(tsfile, decrypted)
                         //获取单个任务信息
