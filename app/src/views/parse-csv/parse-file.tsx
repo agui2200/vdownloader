@@ -24,7 +24,6 @@ const parseFile = async (
   ecb?: (item: taskInfo, err: any) => void
 ) => {
   const rows: Array<string> = raw.toString().split(/\r?\n|\r/)
-  console.debug('on csv result', rows)
   const res: Array<taskInfo> = []
   for (const v of rows) {
     const row = v.split(',')
@@ -37,7 +36,7 @@ const parseFile = async (
         splitCount: 0,
         errorCount: 0,
       }
-      console.debug('on  push csv item', row)
+      console.log('on  push csv item', row)
       if (row[1].indexOf('.mp3') > 0) {
         // 直接是mp3的,算音频
         item.type = 1
@@ -63,7 +62,6 @@ const parseFile = async (
         let drmHeaders = {}
         // 检查一下特殊url,针对xiaoetong做的header 处理
         if (item.url && item.url.indexOf('encrypt-k-vod.xet.tech') > 0) {
-          console.log(item.url)
           const url = new URL(item.url)
           const refs = url.searchParams.get('whref')
           if (refs) {
@@ -74,6 +72,7 @@ const parseFile = async (
             $api.setHeaders(drmHeaders)
           }
         }
+        console.log(item.url)
         item.type = 3
         const m3uUrl = item.url.split('/') //处理掉最后的file.m3u,改为ts
         const tsPath = m3uUrl.slice(0, -1).join('/') //url 还原
@@ -95,7 +94,7 @@ const parseFile = async (
             const resp = e.data
             // 解析m3u
             const m3u: Array<string> = resp.split(/\r?\n|\r/)
-            console.log(m3u[0])
+            console.log(m3u[0], e)
             if (m3u[0].indexOf('#EXTM3U') != -1) {
               // 这样才是m3u
               const parser = new Parser()
@@ -139,7 +138,6 @@ export default function (props: RouterProps) {
   const [parseRowsCount, setParseRowsCount] = useState(0)
   const iRef = useRef<HTMLInputElement | null>(null)
   let cc = 0
-  console.log(parseCount)
   const parsef = (e: any) => {
     return (ee: any) => {
       console.log(e, ee)

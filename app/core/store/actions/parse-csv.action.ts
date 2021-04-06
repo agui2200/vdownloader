@@ -71,6 +71,7 @@ export function ACTION_PARSE_CSV(
     d.key = md5(d.url)
   })
   // 存储tasks
+  console.log('ACTION_PARSE_CSV', action.data)
   return { tasks: action.data }
 }
 
@@ -263,12 +264,17 @@ export async function ACTION_DOWNLOAD(state: StoreStates, action: StoreAction<'A
                 if (task?.url) {
                   const url = new URL(task?.url)
                   url.pathname = url.pathname.split('/').slice(0, -1).join('/')
-                  const tsUrl =
-                    url.protocol +
-                    '//' +
-                    url.host +
-                    [url.pathname, u.uri].join('/') +
-                    url.searchParams.toString()
+                  const tsUrl = url.protocol + '//' + url.host + [url.pathname, u.uri].join('/')
+                  if (u.uri.indexOf('?') > 0) {
+                    if (url.searchParams.toString()) {
+                      tsUrl + '&' + url.searchParams.toString()
+                    }
+                  } else {
+                    if (url.searchParams.toString()) {
+                      tsUrl + '?' + url.searchParams.toString()
+                    }
+                  }
+
                   // 检查文件
                   const tsfile = path + sep + md5(u.uri) + '.ts'
                   if (existsSync(tsfile)) {
@@ -277,7 +283,6 @@ export async function ACTION_DOWNLOAD(state: StoreStates, action: StoreAction<'A
                       continue
                     }
                   }
-
                   // 封装request
                   let req = $api
                     .requestRaw(

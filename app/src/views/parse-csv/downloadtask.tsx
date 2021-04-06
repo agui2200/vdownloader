@@ -15,7 +15,7 @@ export default (props: RouteProps) => {
   const tasks = useSelector((state: StoreStates) => state.tasks)
   const saveAt = useSelector((state: StoreStates) => state.saveAt)
   const taskInfo = useSelector((state: StoreStates) => state.taskInfo)
-  const debounceTasks = useDebounce(tasks, { wait: 1000 })
+  const debounceTasks = useDebounce(tasks, { wait: 5000 })
   console.log(debounceTasks)
   const dispatch = useDispatch()
   useEffect(() => {
