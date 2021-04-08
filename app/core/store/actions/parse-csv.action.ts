@@ -240,6 +240,7 @@ export async function ACTION_DOWNLOAD(state: StoreStates, action: StoreAction<'A
 
       switch (task.type) {
         case taskType.m3u:
+          $tools.log.info('m3u下载...')
           //开始下载ts文件到目标目录
           //切割 playLists
           if (task?.m3uPlayLists) {
@@ -277,6 +278,7 @@ export async function ACTION_DOWNLOAD(state: StoreStates, action: StoreAction<'A
 
                   // 检查文件
                   const tsfile = path + sep + md5(u.uri) + '.ts'
+                  $tools.log.info('ts文件检测' + tsfile + '...')
                   if (existsSync(tsfile)) {
                     if (task.id) {
                       downloadtaskInc(state, task.id)
@@ -299,7 +301,7 @@ export async function ACTION_DOWNLOAD(state: StoreStates, action: StoreAction<'A
                       }
                     )
                     .then((v) => {
-                      const saveFile = (key: any) => {
+                      const decodeAes128SaveFile = (key: any) => {
                         //解密
                         const decipher = crypto.createDecipheriv('aes-128-cbc', key, u.key.iv)
                         // decipher.setAutoPadding(true)
@@ -311,13 +313,21 @@ export async function ACTION_DOWNLOAD(state: StoreStates, action: StoreAction<'A
                         $tools.log.debug('task id ' + t + ' = ' + task?.downloadCount)
                       }
 
+                      const saveFile = () => {
+                        writeFileSync(tsfile, v.data)
+                        //获取单个任务信息
+                        downloadtaskInc(state, t)
+                        $tools.log.debug('task id ' + t + ' = ' + task?.downloadCount)
+                      }
+
+                      $tools.log.info('ts key 检测', u.key)
                       //解密ts
                       if (u.key) {
                         switch (u.key.method) {
                           case 'AES-128':
                             // 获取密钥
                             if (state.m3uKeyCache[u.key.uri]) {
-                              saveFile(state.m3uKeyCache[u.key.uri])
+                              decodeAes128SaveFile(state.m3uKeyCache[u.key.uri])
                             } else {
                               $api
                                 .requestRaw(
@@ -343,7 +353,7 @@ export async function ACTION_DOWNLOAD(state: StoreStates, action: StoreAction<'A
                                   } else {
                                     key = state.m3uKeyCache[u.key.uri]
                                   }
-                                  saveFile(key)
+                                  decodeAes128SaveFile(key)
                                 })
                                 .catch((err) => {
                                   downloadtaskInc(state, t, true)
@@ -358,6 +368,9 @@ export async function ACTION_DOWNLOAD(state: StoreStates, action: StoreAction<'A
                                 })
                             }
                         }
+                      } else {
+                        //没加密的直接下载
+                        saveFile()
                       }
                     })
                     .catch((e) => {
