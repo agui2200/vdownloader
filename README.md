@@ -1,3 +1,7 @@
+## M3U8批量下载器
+
+自动下载对应csv文件中M3U8流下载器，支持解密协议
+
 [中文说明](./README.zh-cn.md)
 ## Quick start
 install
